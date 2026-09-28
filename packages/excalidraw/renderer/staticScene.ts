@@ -271,6 +271,26 @@ const renderLinkIcon = (
     context.restore();
   }
 };
+/** Max parallax shift in scene units per unit of zDepth at full tilt (30°). */
+const PARALLAX_SCALE = 60;
+
+/** Compute parallax offset for a given zDepth and tilt state. */
+const getParallaxOffset = (
+  zDepth: number,
+  tiltX: number,
+  tiltY: number,
+): { dx: number; dy: number } => {
+  if (!zDepth || (!tiltX && !tiltY)) {
+    return { dx: 0, dy: 0 };
+  }
+  const radX = (tiltX * Math.PI) / 180;
+  const radY = (tiltY * Math.PI) / 180;
+  return {
+    dx: zDepth * Math.sin(radY) * PARALLAX_SCALE,
+    dy: -zDepth * Math.sin(radX) * PARALLAX_SCALE,
+  };
+};
+
 const _renderStaticScene = ({
   canvas,
   rc,
@@ -409,6 +429,16 @@ const _renderStaticScene = ({
         context.save();
         const boundTextElement = getBoundTextElement(element, elementsMap);
 
+        // 2.5D parallax: shift element by tilt × zDepth
+        const parallax = getParallaxOffset(
+          element.zDepth ?? 0,
+          appState.tiltX,
+          appState.tiltY,
+        );
+        if (parallax.dx || parallax.dy) {
+          context.translate(parallax.dx, parallax.dy);
+        }
+
         const renderState = getRenderState(element);
         clipElementToFrame(element, renderState);
         renderElement(
@@ -458,6 +488,15 @@ const _renderStaticScene = ({
       try {
         const renderState = getRenderState(element);
         context.save();
+        // 2.5D parallax for embeddables
+        const embParallax = getParallaxOffset(
+          element.zDepth ?? 0,
+          appState.tiltX,
+          appState.tiltY,
+        );
+        if (embParallax.dx || embParallax.dy) {
+          context.translate(embParallax.dx, embParallax.dy);
+        }
         clipElementToFrame(element, renderState);
         renderElement(
           element,

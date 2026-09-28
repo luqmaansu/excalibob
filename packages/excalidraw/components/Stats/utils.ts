@@ -38,7 +38,8 @@ export type StatsInputProperty =
   | "height"
   | "angle"
   | "fontSize"
-  | "gridStep";
+  | "gridStep"
+  | "zDepth";
 
 export const SMALLEST_DELTA = 0.01;
 export const STEP_SIZE = 10;

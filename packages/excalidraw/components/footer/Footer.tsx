@@ -3,13 +3,40 @@ import clsx from "clsx";
 import { actionShortcuts } from "../../actions";
 import { useTunnels } from "../../context/tunnels";
 import { ExitZenModeButton, UndoRedoActions, ZoomActions } from "../Actions";
-import { useApp } from "../App";
+import { useApp, useExcalidrawSetAppState } from "../App";
 import { HelpButton } from "../HelpButton";
 import { Section } from "../Section";
 import Stack from "../Stack";
 
 import type { ActionManager } from "../../actions/manager";
 import type { UIAppState } from "../../types";
+
+const TiltResetButton = ({ appState }: { appState: UIAppState }) => {
+  const setAppState = useExcalidrawSetAppState();
+  const isTilted = appState.tiltX !== 0 || appState.tiltY !== 0;
+  if (!isTilted) {
+    return null;
+  }
+  return (
+    <button
+      className="excalidraw-button zen-mode-transition"
+      style={{
+        fontSize: "0.75rem",
+        padding: "4px 8px",
+        border: "1px solid var(--color-surface-high)",
+        borderRadius: "4px",
+        background: "var(--color-surface-mid)",
+        color: "var(--color-on-surface)",
+        cursor: "pointer",
+        opacity: 0.85,
+      }}
+      title="Reset 3D tilt (Alt+drag to tilt)"
+      onClick={() => setAppState({ tiltX: 0, tiltY: 0 })}
+    >
+      ↩ Tilt
+    </button>
+  );
+};
 
 const Footer = ({
   appState,
@@ -43,6 +70,7 @@ const Footer = ({
               {zoomUIEnabled && app.isNavigationEnabled() && (
                 <ZoomActions renderAction={actionManager.renderAction} />
               )}
+              <TiltResetButton appState={appState} />
 
               {defaultUIEnabled && !appState.viewModeEnabled && (
                 <UndoRedoActions

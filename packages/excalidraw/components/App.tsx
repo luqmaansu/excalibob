@@ -452,6 +452,7 @@ import { AppDrawShape } from "./App.drawshape";
 import { AppDuplicate } from "./App.duplicate";
 import { AppFlowchart } from "./App.flowchart";
 import { AppPan } from "./App.pan";
+import { AppTilt } from "./App.tilt";
 import { AppViewport, RIGHT_SIDEBAR_WIDTH } from "./App.viewport";
 import { AppWheel } from "./App.wheel";
 import BraveMeasureTextError from "./BraveMeasureTextError";
@@ -726,6 +727,7 @@ class App extends React.Component<AppProps, AppState> {
     getPointerCount: () => gesture.pointers.size,
     isDraggingScrollBar: () => isDraggingScrollBar,
   });
+  public tilt: AppTilt = new AppTilt(this);
   public textTool: AppTextTool = new AppTextTool(this);
   public viewport: AppViewport = new AppViewport(this, {
     getContainer: () => this.excalidrawContainerRef.current,
@@ -8858,6 +8860,11 @@ class App extends React.Component<AppProps, AppState> {
     }
 
     if (this.pan.isActive()) {
+      return;
+    }
+
+    // Alt+drag starts a tilt session (2.5D parallax control)
+    if (this.tilt.start(event)) {
       return;
     }
 

@@ -30,6 +30,7 @@ import MultiDimension from "./MultiDimension";
 import MultiFontSize from "./MultiFontSize";
 import MultiPosition from "./MultiPosition";
 import Position from "./Position";
+import ZDepth from "./ZDepth";
 import { getAtomicUnits } from "./utils";
 
 import "./Stats.scss";
@@ -336,6 +337,14 @@ export const StatsInner = memo(
                       <StatsRow>
                         <Angle
                           property="angle"
+                          element={singleElement}
+                          scene={scene}
+                          appState={appState}
+                        />
+                      </StatsRow>
+                      <StatsRow>
+                        <ZDepth
+                          property="zDepth"
                           element={singleElement}
                           scene={scene}
                           appState={appState}
