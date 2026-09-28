@@ -167,6 +167,8 @@ const _newElementBase = <T extends ExcalidrawElement>(
     link,
     locked,
     customData: rest.customData,
+    // excalibob: the layer a new element is created on (absent = layer 0)
+    ...(rest.zDepth ? { zDepth: rest.zDepth } : {}),
   };
   return element;
 };

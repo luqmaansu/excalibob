@@ -200,8 +200,6 @@ type _CommonCanvasAppState = {
   offsetLeft: AppState["offsetLeft"];
   offsetTop: AppState["offsetTop"];
   theme: AppState["theme"];
-  tiltX: AppState["tiltX"];
-  tiltY: AppState["tiltY"];
 };
 
 export type StaticCanvasAppState = Readonly<
@@ -586,10 +584,12 @@ export interface AppState {
   /** user-customized font-picker top picks (pinned via drag & drop from the
    * font picker popup). `null` means no customization (defaults are used) */
   fontTopPicks: readonly FontFamilyValues[] | null;
-  /** 2.5D tilt angle in degrees around the X axis (vertical tilt). Range: -30..30 */
+  /** 3D board view: how far the board tips back, in degrees (0 = flat view) */
   tiltX: number;
-  /** 2.5D tilt angle in degrees around the Y axis (horizontal tilt). Range: -30..30 */
+  /** 3D board view: spin of the board around its vertical axis, in degrees */
   tiltY: number;
+  /** The layer new elements go on, and the one edited in the 3D board view */
+  activeLayer: number;
 }
 
 export type SearchMatch = {

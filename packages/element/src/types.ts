@@ -84,7 +84,7 @@ type _ExcalidrawElementBase = Readonly<{
   link: string | null;
   locked: boolean;
   customData?: Record<string, any>;
-  /** Depth layer for 2.5D parallax effect. 0 = flat (default), positive = closer to viewer. */
+  /** Layer height in the 3D board view: 0 = on the board (default), higher = lifted further. */
   zDepth?: number;
 }>;
 

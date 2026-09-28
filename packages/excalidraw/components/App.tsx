@@ -452,10 +452,11 @@ import { AppDrawShape } from "./App.drawshape";
 import { AppDuplicate } from "./App.duplicate";
 import { AppFlowchart } from "./App.flowchart";
 import { AppPan } from "./App.pan";
-import { AppTilt } from "./App.tilt";
+import { AppTilt, isTilted, layerOf } from "./App.tilt";
 import { AppViewport, RIGHT_SIDEBAR_WIDTH } from "./App.viewport";
 import { AppWheel } from "./App.wheel";
 import BraveMeasureTextError from "./BraveMeasureTextError";
+import { TiltStage } from "./TiltStage";
 import { ContextMenu, CONTEXT_MENU_SEPARATOR } from "./ContextMenu";
 import { activeEyeDropperAtom } from "./EyeDropper";
 import { FileDropOverlay } from "./FileDropOverlay";
@@ -2389,6 +2390,17 @@ class App extends React.Component<AppProps, AppState> {
         this.state.selectedElementsAreBeingDragged,
       frameToHighlight: this.state.frameToHighlight,
     });
+
+    // tilted, the live canvases carry only the layer being edited — the
+    // other layers are drawn by <TiltStage> at their own heights
+    const tilted = isTilted(this.state);
+    const layerVisibleElements = tilted
+      ? visibleElements.filter(
+          (el) =>
+            layerOf(el, this.scene.getNonDeletedElementsMap()) ===
+            this.state.activeLayer,
+        )
+      : visibleElements;
     this.visibleElements = visibleElements;
     this.hasRenderableElements = renderableElementsMap.size > 0;
 
@@ -2654,109 +2666,123 @@ class App extends React.Component<AppProps, AppState> {
                               }}
                             />
                           )}
-                          <StaticCanvas
-                            canvas={this.canvas}
-                            rc={this.rc}
-                            elementsMap={renderableElementsMap}
-                            allElementsMap={allElementsMap}
-                            visibleElements={
-                              this.elementRenderOffsets.size
-                                ? this.renderer.getVisibleElementsWithRenderOffsets(
-                                    visibleElements,
-                                    renderableElementsMap,
-                                    this.state,
-                                    this.elementRenderOffsets,
-                                  )
-                                : visibleElements
-                            }
-                            canvasNonce={canvasNonce}
-                            selectionNonce={
-                              this.state.selectionElement?.versionNonce
-                            }
-                            scale={this.ownerWindow.devicePixelRatio}
+                          <TiltStage
+                            elements={this.scene.getNonDeletedElements()}
+                            sceneNonce={this.scene.getSceneNonce()}
                             appState={this.state}
-                            renderConfig={{
-                              imageCache: this.imageCache,
-                              isExporting: false,
-                              renderGrid: isGridModeEnabled(this),
-                              renderLinks: this.isLinksEnabled(),
-                              canvasBackgroundColor:
-                                this.state.viewBackgroundColor,
-                              embedsValidationStatus:
-                                this.embedsValidationStatus,
-                              elementsPendingErasure:
-                                this.elementsPendingErasure,
-                              pendingFlowchartNodes:
-                                this.flowchart.pendingNodes,
-                              theme: this.state.theme,
-                              ...this.getRenderOverrideConfig(),
-                            }}
-                          />
-                          {previewElement && (
-                            <NewElementCanvas
-                              appState={this.state}
-                              newElement={previewElement}
-                              scale={this.ownerWindow.devicePixelRatio}
+                            files={this.files}
+                          >
+                            <StaticCanvas
+                              canvas={this.canvas}
                               rc={this.rc}
                               elementsMap={renderableElementsMap}
                               allElementsMap={allElementsMap}
+                              visibleElements={
+                                this.elementRenderOffsets.size
+                                  ? this.renderer.getVisibleElementsWithRenderOffsets(
+                                      layerVisibleElements,
+                                      renderableElementsMap,
+                                      this.state,
+                                      this.elementRenderOffsets,
+                                    )
+                                  : layerVisibleElements
+                              }
+                              canvasNonce={canvasNonce}
+                              selectionNonce={
+                                this.state.selectionElement?.versionNonce
+                              }
+                              scale={this.ownerWindow.devicePixelRatio}
+                              appState={
+                                tilted
+                                  ? {
+                                      ...this.state,
+                                      viewBackgroundColor: "transparent",
+                                    }
+                                  : this.state
+                              }
                               renderConfig={{
                                 imageCache: this.imageCache,
                                 isExporting: false,
-                                renderGrid: false,
+                                renderGrid: isGridModeEnabled(this),
+                                renderLinks: this.isLinksEnabled(),
                                 canvasBackgroundColor:
                                   this.state.viewBackgroundColor,
                                 embedsValidationStatus:
                                   this.embedsValidationStatus,
                                 elementsPendingErasure:
                                   this.elementsPendingErasure,
-                                pendingFlowchartNodes: null,
+                                pendingFlowchartNodes:
+                                  this.flowchart.pendingNodes,
                                 theme: this.state.theme,
                                 ...this.getRenderOverrideConfig(),
                               }}
-                              // a tool dragged out of the toolbar previews
-                              // translucently; the element itself is drawn
-                              // exactly as it will land
-                              opacity={
-                                this.toolDrag.preview
-                                  ? TOOL_DRAG_PREVIEW_OPACITY
-                                  : undefined
-                              }
                             />
-                          )}
-                          <InteractiveCanvas
-                            app={this}
-                            containerRef={this.excalidrawContainerRef}
-                            canvas={this.interactiveCanvas}
-                            elementsMap={renderableElementsMap}
-                            visibleElements={visibleElements}
-                            allElementsMap={allElementsMap}
-                            selectedElements={selectedElements}
-                            canvasNonce={canvasNonce}
-                            selectionNonce={
-                              this.state.selectionElement?.versionNonce
-                            }
-                            scale={this.ownerWindow.devicePixelRatio}
-                            appState={this.state}
-                            renderScrollbars={
-                              this.props.renderScrollbars === true
-                            }
-                            editorInterface={this.editorInterface}
-                            interactionEnabled={this.isInteractionEnabled()}
-                            navigationEnabled={this.isNavigationEnabled()}
-                            renderInteractiveSceneCallback={
-                              this.renderInteractiveSceneCallback
-                            }
-                            handleCanvasRef={this.handleInteractiveCanvasRef}
-                            onContextMenu={this.handleCanvasContextMenu}
-                            onClick={this.handleCanvasClick}
-                            onPointerMove={this.handleCanvasPointerMove}
-                            onPointerUp={this.handleCanvasPointerUp}
-                            onPointerCancel={this.handleCanvasPointerCancel}
-                            onTouchMove={this.handleTouchMove}
-                            onPointerDown={this.handleCanvasPointerDown}
-                            onDoubleClick={this.handleCanvasDoubleClick}
-                          />
+                            {previewElement && (
+                              <NewElementCanvas
+                                appState={this.state}
+                                newElement={previewElement}
+                                scale={this.ownerWindow.devicePixelRatio}
+                                rc={this.rc}
+                                elementsMap={renderableElementsMap}
+                                allElementsMap={allElementsMap}
+                                renderConfig={{
+                                  imageCache: this.imageCache,
+                                  isExporting: false,
+                                  renderGrid: false,
+                                  canvasBackgroundColor:
+                                    this.state.viewBackgroundColor,
+                                  embedsValidationStatus:
+                                    this.embedsValidationStatus,
+                                  elementsPendingErasure:
+                                    this.elementsPendingErasure,
+                                  pendingFlowchartNodes: null,
+                                  theme: this.state.theme,
+                                  ...this.getRenderOverrideConfig(),
+                                }}
+                                // a tool dragged out of the toolbar previews
+                                // translucently; the element itself is drawn
+                                // exactly as it will land
+                                opacity={
+                                  this.toolDrag.preview
+                                    ? TOOL_DRAG_PREVIEW_OPACITY
+                                    : undefined
+                                }
+                              />
+                            )}
+                            <InteractiveCanvas
+                              app={this}
+                              containerRef={this.excalidrawContainerRef}
+                              canvas={this.interactiveCanvas}
+                              elementsMap={renderableElementsMap}
+                              visibleElements={layerVisibleElements}
+                              allElementsMap={allElementsMap}
+                              selectedElements={selectedElements}
+                              canvasNonce={canvasNonce}
+                              selectionNonce={
+                                this.state.selectionElement?.versionNonce
+                              }
+                              scale={this.ownerWindow.devicePixelRatio}
+                              appState={this.state}
+                              renderScrollbars={
+                                this.props.renderScrollbars === true
+                              }
+                              editorInterface={this.editorInterface}
+                              interactionEnabled={this.isInteractionEnabled()}
+                              navigationEnabled={this.isNavigationEnabled()}
+                              renderInteractiveSceneCallback={
+                                this.renderInteractiveSceneCallback
+                              }
+                              handleCanvasRef={this.handleInteractiveCanvasRef}
+                              onContextMenu={this.handleCanvasContextMenu}
+                              onClick={this.handleCanvasClick}
+                              onPointerMove={this.handleCanvasPointerMove}
+                              onPointerUp={this.handleCanvasPointerUp}
+                              onPointerCancel={this.handleCanvasPointerCancel}
+                              onTouchMove={this.handleTouchMove}
+                              onPointerDown={this.handleCanvasPointerDown}
+                              onDoubleClick={this.handleCanvasDoubleClick}
+                            />
+                          </TiltStage>
                           {this.props.viewportStatusFrame?.border &&
                             this.editorInterface.formFactor === "phone" && (
                               <ViewportStatusBorder
@@ -3833,6 +3859,7 @@ class App extends React.Component<AppProps, AppState> {
 
   public async componentDidMount() {
     this.unmounted = false;
+    this.tilt.install(() => this.interactiveCanvas);
     this.api = this.createExcalidrawAPI();
 
     this.excalidrawContainerValue.container =
@@ -3930,6 +3957,7 @@ class App extends React.Component<AppProps, AppState> {
   }
 
   public componentWillUnmount() {
+    this.tilt.destroy();
     // we're recreating the api object reference so that the
     // <ExcalidrawAPIContext.Provider/> picks up on it
     this.api = { ...this.api, isDestroyed: true };
@@ -5076,6 +5104,7 @@ class App extends React.Component<AppProps, AppState> {
       strokeStyle: this.state.currentItemStrokeStyle,
       roundness: null,
       roughness: this.state.currentItemRoughness,
+      zDepth: this.state.activeLayer || undefined,
       opacity: this.state.currentItemOpacity,
       text,
       fontSize: this.state.currentItemFontSize,
@@ -6901,6 +6930,11 @@ class App extends React.Component<AppProps, AppState> {
                   !(isTextElement(element) && element.containerId)),
             )
     )
+      .filter(
+        (el) =>
+          !isTilted(this.state) ||
+          layerOf(el, elementsMap) === this.state.activeLayer,
+      )
       .filter((el) => this.hitElement(x, y, el))
       .filter((element) => {
         // hitting a frame's element from outside the frame is not considered a hit
@@ -7234,6 +7268,7 @@ class App extends React.Component<AppProps, AppState> {
         strokeWidth: this.getCurrentItemStrokeWidth("text"),
         strokeStyle: this.state.currentItemStrokeStyle,
         roughness: this.state.currentItemRoughness,
+        zDepth: this.state.activeLayer || undefined,
         opacity: this.state.currentItemOpacity,
         text: "",
         fontSize,
@@ -10034,6 +10069,7 @@ class App extends React.Component<AppProps, AppState> {
       strokeWidth: this.getCurrentItemStrokeWidth("freedraw"),
       strokeStyle: this.state.currentItemStrokeStyle,
       roughness: this.state.currentItemRoughness,
+      zDepth: this.state.activeLayer || undefined,
       opacity: this.state.currentItemOpacity,
       roundness: null,
       simulatePressure,
@@ -10102,6 +10138,7 @@ class App extends React.Component<AppProps, AppState> {
       strokeWidth: this.getCurrentItemStrokeWidth("iframe"),
       strokeStyle: this.state.currentItemStrokeStyle,
       roughness: this.state.currentItemRoughness,
+      zDepth: this.state.activeLayer || undefined,
       roundness: this.getCurrentItemRoundness("iframe"),
       opacity: this.state.currentItemOpacity,
       locked: false,
@@ -10155,6 +10192,7 @@ class App extends React.Component<AppProps, AppState> {
       strokeWidth: this.getCurrentItemStrokeWidth("embeddable"),
       strokeStyle: this.state.currentItemStrokeStyle,
       roughness: this.state.currentItemRoughness,
+      zDepth: this.state.activeLayer || undefined,
       roundness: this.getCurrentItemRoundness("embeddable"),
       opacity: this.state.currentItemOpacity,
       locked: false,
@@ -10202,6 +10240,7 @@ class App extends React.Component<AppProps, AppState> {
       strokeWidth: this.getCurrentItemStrokeWidth("image"),
       strokeStyle: this.state.currentItemStrokeStyle,
       roughness: this.state.currentItemRoughness,
+      zDepth: this.state.activeLayer || undefined,
       roundness: null,
       opacity: this.state.currentItemOpacity,
       locked: false,
@@ -10379,6 +10418,7 @@ class App extends React.Component<AppProps, AppState> {
               strokeWidth: this.getCurrentItemStrokeWidth(elementType),
               strokeStyle: this.state.currentItemStrokeStyle,
               roughness: this.state.currentItemRoughness,
+              zDepth: this.state.activeLayer || undefined,
               opacity: this.state.currentItemOpacity,
               roundness:
                 this.state.currentItemArrowType === ARROW_TYPE.round
@@ -10406,6 +10446,7 @@ class App extends React.Component<AppProps, AppState> {
               strokeWidth: this.getCurrentItemStrokeWidth(elementType),
               strokeStyle: this.state.currentItemStrokeStyle,
               roughness: this.state.currentItemRoughness,
+              zDepth: this.state.activeLayer || undefined,
               opacity: this.state.currentItemOpacity,
               roundness:
                 this.state.currentItemRoundness === "round"
@@ -10581,6 +10622,7 @@ class App extends React.Component<AppProps, AppState> {
       strokeWidth: this.getCurrentItemStrokeWidth(elementType),
       strokeStyle: this.state.currentItemStrokeStyle,
       roughness: this.state.currentItemRoughness,
+      zDepth: this.state.activeLayer || undefined,
       opacity: this.state.currentItemOpacity,
       roundness: this.getCurrentItemRoundness(elementType),
       locked: false,
@@ -11423,7 +11465,13 @@ class App extends React.Component<AppProps, AppState> {
           }
           const elementsWithinSelection = this.state.selectionElement
             ? getElementsWithinSelection(
-                elements,
+                isTilted(this.state)
+                  ? elements.filter(
+                      (el) =>
+                        layerOf(el, this.scene.getNonDeletedElementsMap()) ===
+                        this.state.activeLayer,
+                    )
+                  : elements,
                 this.state.selectionElement,
                 this.scene.getNonDeletedElementsMap(),
                 false,

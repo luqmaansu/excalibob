@@ -118,6 +118,8 @@ exports[`exportToSvg > with default arguments 1`] = `
   "suggestedBinding": null,
   "textToolHover": null,
   "theme": "light",
+  "tiltX": 0,
+  "tiltY": 0,
   "toast": null,
   "viewBackgroundColor": "#ffffff",
   "viewModeEnabled": false,

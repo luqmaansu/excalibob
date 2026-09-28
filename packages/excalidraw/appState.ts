@@ -145,6 +145,7 @@ export const getDefaultAppState = (): Omit<
     fontTopPicks: null,
     tiltX: 0,
     tiltY: 0,
+    activeLayer: 0,
   };
 };
 
@@ -292,6 +293,7 @@ const APP_STATE_STORAGE_CONF = (<
   fontTopPicks: { browser: true, export: false, server: false },
   tiltX: { browser: false, export: false, server: false },
   tiltY: { browser: false, export: false, server: false },
+  activeLayer: { browser: true, export: false, server: false },
 });
 
 const _clearAppStateForStorage = <

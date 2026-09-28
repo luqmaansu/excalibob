@@ -4,6 +4,9 @@ import { actionShortcuts } from "../../actions";
 import { useTunnels } from "../../context/tunnels";
 import { ExitZenModeButton, UndoRedoActions, ZoomActions } from "../Actions";
 import { useApp, useExcalidrawSetAppState } from "../App";
+import { DEFAULT_TILT, MAX_LAYER, isTilted } from "../App.tilt";
+import { IconButton } from "../IconButton";
+import { Tooltip } from "../Tooltip";
 import { HelpButton } from "../HelpButton";
 import { Section } from "../Section";
 import Stack from "../Stack";
@@ -11,30 +14,70 @@ import Stack from "../Stack";
 import type { ActionManager } from "../../actions/manager";
 import type { UIAppState } from "../../types";
 
-const TiltResetButton = ({ appState }: { appState: UIAppState }) => {
+/** Toggles the 3D board view (Alt+drag on empty canvas also enters it). */
+/**
+ * The current layer: new shapes go on it, and the 3D view edits it.
+ * With shapes selected, the arrows carry them up/down along with it.
+ */
+const LayerStepper = ({ appState }: { appState: UIAppState }) => {
+  const app = useApp();
   const setAppState = useExcalidrawSetAppState();
-  const isTilted = appState.tiltX !== 0 || appState.tiltY !== 0;
-  if (!isTilted) {
-    return null;
-  }
+  const layer = appState.activeLayer;
+  const move = (delta: number) => {
+    const next = Math.max(0, Math.min(MAX_LAYER, layer + delta));
+    for (const el of app.scene.getSelectedElements(appState)) {
+      if (!("containerId" in el && el.containerId)) {
+        app.scene.mutateElement(el, { zDepth: next || undefined });
+      }
+    }
+    setAppState({ activeLayer: next });
+  };
+  const carrying = Object.keys(appState.selectedElementIds).length > 0;
+  const hint = carrying
+    ? "Move the selection to the layer below / above"
+    : "Switch to the layer below / above — new shapes go on it";
   return (
-    <button
-      className="excalidraw-button zen-mode-transition"
-      style={{
-        fontSize: "0.75rem",
-        padding: "4px 8px",
-        border: "1px solid var(--color-surface-high)",
-        borderRadius: "4px",
-        background: "var(--color-surface-mid)",
-        color: "var(--color-on-surface)",
-        cursor: "pointer",
-        opacity: 0.85,
-      }}
-      title="Reset 3D tilt (Alt+drag to tilt)"
-      onClick={() => setAppState({ tiltX: 0, tiltY: 0 })}
-    >
-      ↩ Tilt
-    </button>
+    <div className="excalibob-layer-stepper" title={hint}>
+      <button
+        type="button"
+        aria-label="Layer down"
+        disabled={layer <= 0}
+        onClick={() => move(-1)}
+      >
+        ‹
+      </button>
+      <span>Layer {layer}</span>
+      <button
+        type="button"
+        aria-label="Layer up"
+        disabled={layer >= MAX_LAYER}
+        onClick={() => move(1)}
+      >
+        ›
+      </button>
+    </div>
+  );
+};
+
+const TiltToggleButton = ({ appState }: { appState: UIAppState }) => {
+  const setAppState = useExcalidrawSetAppState();
+  const tilted = isTilted(appState);
+  const label = tilted
+    ? "Back to the flat view"
+    : "3D board view — each layer lifts off the board";
+  return (
+    <Tooltip label={label} delay>
+      <IconButton
+        type="button"
+        className="excalibob-tilt-toggle"
+        aria-label={label}
+        onClick={() =>
+          setAppState(tilted ? { tiltX: 0, tiltY: 0 } : DEFAULT_TILT)
+        }
+      >
+        {tilted ? "Flat" : "3D"}
+      </IconButton>
+    </Tooltip>
   );
 };
 
@@ -70,7 +113,8 @@ const Footer = ({
               {zoomUIEnabled && app.isNavigationEnabled() && (
                 <ZoomActions renderAction={actionManager.renderAction} />
               )}
-              <TiltResetButton appState={appState} />
+              <TiltToggleButton appState={appState} />
+              <LayerStepper appState={appState} />
 
               {defaultUIEnabled && !appState.viewModeEnabled && (
                 <UndoRedoActions
